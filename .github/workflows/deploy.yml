@@ -1,0 +1,55 @@
+name: Local Docker CI/CD
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  local-deploy:
+    name: Local Build & Deploy
+    # Target your local self-hosted runner
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Stop and Clean Old Container
+        run: |
+          # Stop and remove the existing container if it is running
+          $containerExists = docker ps -a --format "{{.Names}}" | Select-String -Pattern "^web-app$"
+          if ($containerExists) {
+              Write-Output "Stopping and removing existing 'web-app' container..."
+              docker stop web-app
+              docker rm web-app
+          } else {
+              Write-Output "No existing 'web-app' container found."
+          }
+        shell: powershell
+
+      - name: Build Docker Image
+        run: |
+          Write-Output "Building Docker image 'local-web-app:latest'..."
+          docker build -t local-web-app:latest .
+        shell: powershell
+
+      - name: Run Container
+        run: |
+          Write-Output "Starting container 'web-app' on port 3000..."
+          docker run -d `
+            --name web-app `
+            -p 3000:3000 `
+            --restart unless-stopped `
+            local-web-app:latest
+        shell: powershell
+
+      - name: Verify Container is Running
+        run: |
+          Start-Sleep -Seconds 5
+          $status = docker inspect --format '{{.State.Status}}' web-app
+          Write-Output "Container status: $status"
+          if ($status -ne "running") {
+              Write-Error "Container failed to start!"
+              exit 1
+          }
+        shell: powershell

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Dockerized Application CI/CD pipeline dashboard. Monitored through GitHub Actions and container status.">
+  <title>CI/CD Container Dashboard</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="glow-bg"></div>
+  
+  <div class="container">
+    <header>
+      <div class="logo">
+        <span class="icon">🚀</span>
+        <h1>Antigravity Ops</h1>
+      </div>
+      <div class="badge" id="pipeline-badge">CI/CD Active</div>
+    </header>
+
+    <main>
+      <section class="hero-section">
+        <h2>Continuous Deployment Pipeline</h2>
+        <p class="subtitle">Your application is successfully containerized and deployed via GitHub Actions.</p>
+      </section>
+
+      <div class="dashboard-grid">
+        <!-- Container Status Card -->
+        <div class="card glass" id="status-card">
+          <div class="card-header">
+            <h3>Container Status</h3>
+            <span class="status-indicator live"></span>
+          </div>
+          <div class="status-details">
+            <div class="metric">
+              <span class="label">Status</span>
+              <span class="value success-text" id="node-status">Checking...</span>
+            </div>
+            <div class="metric">
+              <span class="label">Uptime</span>
+              <span class="value" id="node-uptime">0s</span>
+            </div>
+            <div class="metric">
+              <span class="label">Environment</span>
+              <span class="value highlight-text" id="node-env">production</span>
+            </div>
+            <div class="metric">
+              <span class="label">Last Updated</span>
+              <span class="value" id="node-updated">-</span>
+            </div>
+          </div>
+          <button class="btn btn-primary" id="refresh-btn">Fetch Live Telemetry</button>
+        </div>
+
+        <!-- Pipeline Workflow Card -->
+        <div class="card glass">
+          <div class="card-header">
+            <h3>Pipeline Stages</h3>
+          </div>
+          <div class="workflow-steps">
+            <div class="step active">
+              <div class="step-num">1</div>
+              <div class="step-info">
+                <h4>Code Push</h4>
+                <p>Triggered on commit to <code>main</code> branch.</p>
+              </div>
+            </div>
+            <div class="step active">
+              <div class="step-num">2</div>
+              <div class="step-info">
+                <h4>Docker Build</h4>
+                <p>Multi-stage builder compile.</p>
+              </div>
+            </div>
+            <div class="step active">
+              <div class="step-num">3</div>
+              <div class="step-info">
+                <h4>Image Push</h4>
+                <p>Secure upload to Container Registry.</p>
+              </div>
+            </div>
+            <div class="step active">
+              <div class="step-num">4</div>
+              <div class="step-info">
+                <h4>Automated Deploy</h4>
+                <p>Container recreation on remote host.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <p>&copy; 2026 Antigravity Ops. Running securely in Docker.</p>
+    </footer>
+  </div>
+
+  <script>
+    async function fetchTelemetry() {
+      const statusText = document.getElementById('node-status');
+      const uptimeText = document.getElementById('node-uptime');
+      const envText = document.getElementById('node-env');
+      const updatedText = document.getElementById('node-updated');
+      const refreshBtn = document.getElementById('refresh-btn');
+
+      refreshBtn.textContent = 'Loading...';
+      refreshBtn.disabled = true;
+
+      try {
+        const response = await fetch('/api/health');
+        if (!response.ok) throw new Error('Network response not ok');
+        const data = await response.json();
+
+        statusText.textContent = data.status.toUpperCase();
+        statusText.className = 'value success-text';
+        
+        // Format uptime
+        const uptimeSecs = Math.round(data.uptime);
+        if (uptimeSecs < 60) {
+          uptimeText.textContent = `${uptimeSecs}s`;
+        } else {
+          uptimeText.textContent = `${Math.floor(uptimeSecs / 60)}m ${uptimeSecs % 60}s`;
+        }
+
+        envText.textContent = data.env;
+        
+        const date = new Date(data.timestamp);
+        updatedText.textContent = date.toLocaleTimeString();
+      } catch (error) {
+        statusText.textContent = 'UNREACHABLE';
+        statusText.className = 'value error-text';
+        uptimeText.textContent = 'N/A';
+        updatedText.textContent = 'Error';
+        console.error('Telemetry fetch failed:', error);
+      } finally {
+        refreshBtn.textContent = 'Fetch Live Telemetry';
+        refreshBtn.disabled = false;
+      }
+    }
+
+    document.getElementById('refresh-btn').addEventListener('click', fetchTelemetry);
+    
+    // Initial fetch
+    fetchTelemetry();
+    // Auto refresh every 10 seconds
+    setInterval(fetchTelemetry, 10000);
+  </script>
+</body>
+</html>
